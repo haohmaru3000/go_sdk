@@ -1,13 +1,14 @@
 package aws
 
 import (
+	"context"
 	"flag"
 	"fmt"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/session"
-	s32 "github.com/aws/aws-sdk-go/service/s3"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/credentials"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/haohmaru3000/go_sdk/logger"
 	"github.com/haohmaru3000/go_sdk/sdkcm"
 )
@@ -19,15 +20,16 @@ var (
 	ErrS3BucketMissing       = sdkcm.CustomError("ErrS3ApiKeyMissing", "AWS S3 bucket is missing")
 )
 
-type s3 struct {
+type s3Provider struct {
 	name   string
 	prefix string
 	logger logger.Logger
 
 	cfg s3Config
 
-	session *session.Session
-	service *s32.S3
+	config         *aws.Config
+	service        *s3.Client
+	presignService *s3.PresignClient
 }
 
 type s3Config struct {
@@ -37,35 +39,37 @@ type s3Config struct {
 	s3Bucket    string
 }
 
-func New(prefix ...string) *s3 {
+func NewS3Provider(prefix ...string) *s3Provider {
 	pre := "aws-s3"
 
 	if len(prefix) > 0 {
 		pre = prefix[0]
 	}
 
-	return &s3{
+	return &s3Provider{
 		name:   "aws-s3",
 		prefix: pre,
 	}
 }
 
-func (s *s3) Get() interface{} {
+func (s *s3Provider) Get() interface{} {
 	return s
 }
 
-func (s *s3) Name() string {
+func (s *s3Provider) Name() string {
 	return s.name
 }
 
-func (s *s3) InitFlags() {
+func (s *s3Provider) InitFlags() {
 	flag.StringVar(&s.cfg.s3ApiKey, fmt.Sprintf("%s-%s", s.GetPrefix(), "api-key"), "", "S3 API key")
 	flag.StringVar(&s.cfg.s3ApiSecret, fmt.Sprintf("%s-%s", s.GetPrefix(), "api-secret"), "", "S3 API secret key")
 	flag.StringVar(&s.cfg.s3Region, fmt.Sprintf("%s-%s", s.GetPrefix(), "region"), "", "S3 region")
 	flag.StringVar(&s.cfg.s3Bucket, fmt.Sprintf("%s-%s", s.GetPrefix(), "bucket"), "", "S3 bucket")
 }
 
-func (s *s3) Configure() error {
+func (s *s3Provider) Configure() error {
+	ctx := context.TODO()
+
 	s.logger = logger.GetCurrent().GetLogger(s.Name())
 
 	if err := s.cfg.check(); err != nil {
@@ -73,32 +77,41 @@ func (s *s3) Configure() error {
 		return err
 	}
 
-	credential := credentials.NewStaticCredentials(s.cfg.s3ApiKey, s.cfg.s3ApiSecret, "")
-	_, err := credential.Get()
+	credential := credentials.NewStaticCredentialsProvider(s.cfg.s3ApiKey, s.cfg.s3ApiSecret, "")
+	_, err := credential.Retrieve(ctx)
 	if err != nil {
 		s.logger.Errorln(err)
 		return err
 	}
 
-	config := aws.NewConfig().WithRegion(s.cfg.s3Region).WithCredentials(credential)
-	ss, err := session.NewSession(config)
-	service := s32.New(ss, config)
+	config, err := config.LoadDefaultConfig(ctx,
+		config.WithRegion(s.cfg.s3Region),
+		config.WithCredentialsProvider(credential),
+	)
+	if err != nil {
+		s.logger.Errorln(err)
+		return err
+	}
 
-	s.session = ss
+	service := s3.NewFromConfig(config)
+	presignService := s3.NewPresignClient(s3.NewFromConfig(config))
+
+	s.config = &config
 	s.service = service
+	s.presignService = presignService
 
 	return nil
 }
 
-func (s *s3) GetPrefix() string {
+func (s *s3Provider) GetPrefix() string {
 	return s.prefix
 }
 
-func (s *s3) Run() error {
+func (s *s3Provider) Run() error {
 	return s.Configure()
 }
 
-func (s *s3) Stop() <-chan bool {
+func (s *s3Provider) Stop() <-chan bool {
 	c := make(chan bool)
 	go func() { c <- true }()
 	return c

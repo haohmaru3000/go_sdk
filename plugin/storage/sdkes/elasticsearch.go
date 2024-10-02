@@ -3,12 +3,13 @@
 package sdkes
 
 import (
+	"context"
 	"flag"
-	"log"
 	"os"
 
+	"github.com/elastic/elastic-transport-go/v8/elastictransport"
+	elastic "github.com/elastic/go-elasticsearch/v8"
 	"github.com/haohmaru3000/go_sdk/logger"
-	"github.com/olivere/elastic/v7"
 )
 
 const (
@@ -80,19 +81,31 @@ func (es *es) Configure() error {
 
 	var client *elastic.Client
 	var err error
+
 	if es.Username != "" && es.Password != "" {
 		client, err = elastic.NewClient(
-			elastic.SetURL(es.URL),
-			elastic.SetBasicAuth(es.Username, es.Password),
-			elastic.SetInfoLog(log.New(os.Stdout, "ELASTIC ", log.LstdFlags)),
-			elastic.SetSniff(es.HasSniff),
-			elastic.SetHealthcheck(es.HasHealthCheck))
+			elastic.Config{
+				Addresses: []string{es.URL},
+				Username:  es.Username,
+				Password:  es.Password,
+				Logger: &elastictransport.ColorLogger{
+					Output:             os.Stdout,
+					EnableRequestBody:  true,
+					EnableResponseBody: true,
+				},
+			},
+		)
 	} else {
 		client, err = elastic.NewClient(
-			elastic.SetURL(es.URL),
-			elastic.SetInfoLog(log.New(os.Stdout, "ELASTIC ", log.LstdFlags)),
-			elastic.SetSniff(es.HasSniff),
-			elastic.SetHealthcheck(es.HasHealthCheck))
+			elastic.Config{
+				Addresses: []string{es.URL},
+				Logger: &elastictransport.ColorLogger{
+					Output:             os.Stdout,
+					EnableRequestBody:  true,
+					EnableResponseBody: true,
+				},
+			},
+		)
 	}
 
 	if err != nil {
@@ -117,12 +130,15 @@ func (es *es) Run() error {
 	return es.Configure()
 }
 
-func (es *es) Stop() <-chan bool {
+func (es *es) Stop(ctx context.Context) <-chan bool {
+	if ctx == nil {
+		ctx = context.TODO()
+	}
 
 	c := make(chan bool)
 	go func() {
 		if es.client != nil {
-			es.client.Stop()
+			es.client.InstrumentationEnabled().Close(ctx)
 		}
 		c <- true
 	}()

@@ -2,16 +2,19 @@ package aws
 
 import (
 	"context"
-	"github.com/aws/aws-sdk-go/aws"
-	s32 "github.com/aws/aws-sdk-go/service/s3"
 	"time"
+
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 )
 
-func (s *s3) GetImageWithExpireLink(ctx context.Context, imageKey string, duration time.Duration) (string, error) {
-	req, _ := s.service.GetObjectRequest(&s32.GetObjectInput{
+func (s *s3Provider) GetImageWithExpireLink(ctx context.Context, imageKey string, duration time.Duration) (string, error) {
+	req, err := s.presignService.PresignGetObject(ctx, &s3.GetObjectInput{
 		Bucket: aws.String(s.cfg.s3Bucket),
 		Key:    aws.String(imageKey),
+	}, func(o *s3.PresignOptions) {
+		o.Expires = duration
 	})
 
-	return req.Presign(duration)
+	return req.URL, err
 }

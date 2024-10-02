@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 )
 
@@ -82,7 +82,7 @@ func (ak *accountKit) GetUserInfo(ctx context.Context, token string) (UserInfo, 
 	}
 	defer resp.Body.Close()
 
-	data, _ := ioutil.ReadAll(resp.Body)
+	data, _ := io.ReadAll(resp.Body)
 
 	if resp.StatusCode >= http.StatusMultipleChoices {
 		return nil, errors.New(string(data))

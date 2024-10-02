@@ -21,13 +21,14 @@ const (
 	DefaultEnv = DevEnv
 )
 
+// Encapsulation cho Service của ta
 type service struct {
 	name         string
 	version      string
 	env          string
 	opts         []Option
 	subServices  []Runnable
-	initServices map[string]PrefixRunnable
+	initServices map[string]PrefixRunnable // Map có key là Service's name, và rút ra dc Runnable
 	isRegister   bool
 	logger       logger.Logger
 	httpServer   HttpServer
@@ -36,6 +37,8 @@ type service struct {
 	stopFunc     func()
 }
 
+// New với n options:
+// Option: là 1 function dc truyền vào 1 Service
 func New(opts ...Option) Service {
 	sv := &service{
 		opts:         opts,
@@ -49,7 +52,7 @@ func New(opts ...Option) Service {
 	sv.logger = logger.GetCurrent().GetLogger("service")
 
 	for _, opt := range opts {
-		opt(sv)
+		opt(sv) // Truyền vào service
 	}
 
 	//// Http server
@@ -69,6 +72,8 @@ func New(opts ...Option) Service {
 	loggerRunnable := logger.GetCurrent().(Runnable)
 	loggerRunnable.InitFlags()
 
+	// Trong các Flags của Go: cho phép ta parse và traverse qua tất cả Flags
+	// Có sd flagenv lib: cho phép load của biến file .env vào trong service
 	sv.cmdLine = newFlagSet(sv.name, flag.CommandLine)
 	sv.parseFlags()
 

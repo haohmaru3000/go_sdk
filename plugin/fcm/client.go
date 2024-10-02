@@ -2,8 +2,9 @@ package fcm
 
 import (
 	"context"
-	gofcm "github.com/NaySoftware/go-fcm"
 	"strconv"
+
+	gofcm "github.com/NaySoftware/go-fcm"
 )
 
 func (s *fcmClient) ShowPrintResult(show bool) {

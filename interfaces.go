@@ -21,13 +21,13 @@ type Storage interface {
 }
 
 type PrefixRunnable interface {
-	HasPrefix
-	Runnable
+	HasPrefix // Runnable có Prefix
+	Runnable  // Runnable ko có Prefix
 }
 
 type HasPrefix interface {
-	GetPrefix() string
-	Get() interface{}
+	GetPrefix() string // Get ra Prefix của nó
+	Get() interface{}  // Get ra bản thân Runnable đó
 }
 
 // The heart of SDK, Service represents for a real micro service
@@ -70,18 +70,20 @@ type ServiceContext interface {
 // Runnable is an abstract object in SDK
 // Almost components are Runnable. SDK will manage their lifecycle
 // InitFlags -> Configure -> Run -> Stop
+// Đồ chơi: Gorm(-> mysql/postgres), Redis, Mailer, Uploader...
 type Runnable interface {
 	Name() string
-	InitFlags()
-	Configure() error
-	Run() error
-	Stop() <-chan bool
+	InitFlags()        // Hàm đăng ký flag
+	Configure() error  // Cấu hình sau khi lấy thông số từ biến môi trường vào (VD: với db thì check connect dc ko)
+	Run() error        // Runnable vì có thể Run dc. 1 component có process độc lập và có thể Run(VD: Schedule, Timer tick)
+	Stop() <-chan bool // Stop 1 lượt (concurrent Stop)
 }
 
 // GIN HTTP server for REST API
 type HttpServer interface {
 	Runnable
 	// Add handlers to GIN
+	// Để nhận vào 1 hàm Gin engine, mục đích để cấu hình đường link API
 	AddHandler(HttpServerHandler)
 	// Return server config
 	//GetConfig() http_server.Config

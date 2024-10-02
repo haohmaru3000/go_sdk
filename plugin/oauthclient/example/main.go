@@ -1,12 +1,12 @@
 package main
 
 import (
+	"golang.org/x/oauth2/clientcredentials"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 	goservice "github.com/haohmaru3000/go_sdk"
 	"github.com/haohmaru3000/go_sdk/plugin/oauthclient"
-	"golang.org/x/oauth2/clientcredentials"
 )
 
 var appClientConf = clientcredentials.Config{

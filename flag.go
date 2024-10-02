@@ -58,7 +58,9 @@ func newFlagSet(name string, fs *flag.FlagSet) *AppFlagSet {
 }
 
 func (f *AppFlagSet) GetSampleEnvs() {
+	// Anonymous function trong VisitAll: có tác dụng đẩy các Flags cho ta sd
 	f.VisitAll(func(f *flag.Flag) {
+		// Pattern 'visitor'
 		if f.Name == "outenv" {
 			return
 		}
