@@ -40,7 +40,7 @@ func (j *jaeger) GetPrefix() string {
 
 // Note: this plugin will not return anything
 func (j *jaeger) Get() interface{} {
-	return nil
+	return j
 }
 
 func (j *jaeger) InitFlags() {
