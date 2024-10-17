@@ -21,11 +21,9 @@ type jaeger struct {
 	stdTracingEnabled bool
 }
 
-func NewJaeger(processName, agentURI string, port int) *jaeger {
+func NewJaeger(processName string) *jaeger {
 	return &jaeger{
 		processName: processName,
-		agentURI:    agentURI,
-		port:        port,
 		stopChan:    make(chan bool),
 	}
 }
@@ -38,7 +36,6 @@ func (j *jaeger) GetPrefix() string {
 	return j.Name()
 }
 
-// Note: this plugin will not return anything
 func (j *jaeger) Get() interface{} {
 	return j
 }
@@ -61,7 +58,7 @@ func (j *jaeger) InitFlags() {
 	flag.IntVar(
 		&j.port,
 		"jaeger-agent-port",
-		4318,
+		6831, // Should use port 4318 for newer version
 		"jaeger agent URI to receive tracing data directly",
 	)
 
