@@ -9,10 +9,11 @@ import (
 	"strings"
 	"sync"
 
+	"go.opencensus.io/plugin/ochttp"
+
 	"github.com/gin-gonic/gin"
 	"github.com/haohmaru3000/go_sdk/httpserver/middleware"
 	"github.com/haohmaru3000/go_sdk/logger"
-	"go.opencensus.io/plugin/ochttp"
 )
 
 var (

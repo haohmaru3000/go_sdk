@@ -1,14 +1,18 @@
 package jaeger
 
 import (
+	"context"
 	"flag"
 	"fmt"
 
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
+	"go.opentelemetry.io/otel/propagation"
+	"go.opentelemetry.io/otel/sdk/resource"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
+
 	"github.com/haohmaru3000/go_sdk/logger"
-	jg "go.opencensus.io/exporter/jaeger"
-	"go.opencensus.io/plugin/ocgrpc"
-	"go.opencensus.io/stats/view"
-	"go.opencensus.io/trace"
 )
 
 type jaeger struct {
@@ -58,7 +62,7 @@ func (j *jaeger) InitFlags() {
 	flag.IntVar(
 		&j.port,
 		"jaeger-agent-port",
-		6831, // Should use port 4318 for newer version
+		4318,
 		"jaeger agent URI to receive tracing data directly",
 	)
 
@@ -76,10 +80,21 @@ func (j *jaeger) Configure() error {
 }
 
 func (j *jaeger) Run() error {
+	ctx := context.Background()
+
 	if err := j.Configure(); err != nil {
 		return err
 	}
-	return j.connectToJaegerAgent()
+
+	tp, err := j.connectToJaegerAgent(ctx)
+
+	// Handle shutdown properly so nothing leaks.
+	defer func() { _ = tp.Shutdown(ctx) }()
+
+	otel.SetTracerProvider(tp)
+	otel.SetTextMapPropagator(propagation.TraceContext{})
+
+	return err
 }
 
 func (j *jaeger) Stop() <-chan bool {
@@ -99,43 +114,56 @@ func (j *jaeger) isEnabled() bool {
 	return j.agentURI != ""
 }
 
-func (j *jaeger) connectToJaegerAgent() error {
+func (j *jaeger) getSampler() sdktrace.Sampler {
+	if j.sampleTraceRating >= 1 {
+		return sdktrace.AlwaysSample()
+	} else {
+		return sdktrace.TraceIDRatioBased(j.sampleTraceRating)
+	}
+}
+
+func (j *jaeger) getResource() *resource.Resource {
+	return resource.NewWithAttributes(
+		semconv.SchemaURL,
+		semconv.ServiceNameKey.String("Todo-List-Service"),
+		semconv.ServiceVersionKey.String("1.0.0"),
+	)
+}
+
+func (j *jaeger) connectToJaegerAgent(ctx context.Context) (*sdktrace.TracerProvider, error) {
 	if !j.isEnabled() {
-		return nil
+		return nil, nil
 	}
 
 	url := fmt.Sprintf("%s:%d", j.agentURI, j.port)
 	j.logger.Infof("connecting to Jaeger Agent on %s...", url)
 
-	je, err := jg.NewExporter(jg.Options{
-		AgentEndpoint: url,
-		Process:       jg.Process{ServiceName: j.processName},
-	})
-
+	je, err := otlptracehttp.New(
+		ctx,
+		otlptracehttp.WithEndpoint(url),
+		otlptracehttp.WithInsecure(),
+	)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	// And now finally register it as a Trace Exporter
-	trace.RegisterExporter(je)
+	tracerProvider := sdktrace.NewTracerProvider(
+		sdktrace.WithSampler(j.getSampler()),
+		sdktrace.WithBatcher(je), // Set je as our 'Trace Exporter'
+		sdktrace.WithResource(j.getResource()),
+	)
 
 	// Trace view for console
-	if j.stdTracingEnabled {
-		// Register stats and trace exporters to export
-		// the collected data.
-		view.RegisterExporter(&PrintExporter{})
+	// if j.stdTracingEnabled {
+	// 	// Register stats and trace exporters to export
+	// 	// the collected data.
+	// 	view.RegisterExporter(&PrintExporter{})
 
-		// Register the views to collect server request count.
-		if err := view.Register(ocgrpc.DefaultServerViews...); err != nil {
-			j.logger.Errorf("jaeger error: %s", err.Error())
-		}
-	}
+	// 	// Register the views to collect server request count.
+	// 	if err := view.Register(ocgrpc.DefaultServerViews...); err != nil {
+	// 		j.logger.Errorf("jaeger error: %s", err.Error())
+	// 	}
+	// }
 
-	if j.sampleTraceRating >= 1 {
-		trace.ApplyConfig(trace.Config{DefaultSampler: trace.AlwaysSample()})
-	} else {
-		trace.ApplyConfig(trace.Config{DefaultSampler: trace.ProbabilitySampler(j.sampleTraceRating)})
-	}
-
-	return nil
+	return tracerProvider, nil
 }
