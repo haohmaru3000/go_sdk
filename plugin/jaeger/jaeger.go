@@ -23,6 +23,8 @@ type jaeger struct {
 	agentURI          string
 	port              int
 	stdTracingEnabled bool
+	context           context.Context
+	tracerProvider    *sdktrace.TracerProvider
 }
 
 func NewJaeger(processName string) *jaeger {
@@ -80,21 +82,11 @@ func (j *jaeger) Configure() error {
 }
 
 func (j *jaeger) Run() error {
-	ctx := context.Background()
-
 	if err := j.Configure(); err != nil {
 		return err
 	}
 
-	tp, err := j.connectToJaegerAgent(ctx)
-
-	// Handle shutdown properly so nothing leaks.
-	defer func() { _ = tp.Shutdown(ctx) }()
-
-	otel.SetTracerProvider(tp)
-	otel.SetTextMapPropagator(propagation.TraceContext{})
-
-	return err
+	return j.connectToJaegerAgent()
 }
 
 func (j *jaeger) Stop() <-chan bool {
@@ -103,8 +95,9 @@ func (j *jaeger) Stop() <-chan bool {
 			j.stopChan <- true
 			return
 		}
-
+		j.tracerProvider.Shutdown(j.context)
 		j.stopChan <- true
+		j.logger.Infoln("shut down Tracer-Provider")
 	}()
 
 	return j.stopChan
@@ -125,14 +118,16 @@ func (j *jaeger) getSampler() sdktrace.Sampler {
 func (j *jaeger) getResource() *resource.Resource {
 	return resource.NewWithAttributes(
 		semconv.SchemaURL,
-		semconv.ServiceNameKey.String("Todo-List-Service"),
+		semconv.ServiceNameKey.String(j.processName),
 		semconv.ServiceVersionKey.String("1.0.0"),
 	)
 }
 
-func (j *jaeger) connectToJaegerAgent(ctx context.Context) (*sdktrace.TracerProvider, error) {
+func (j *jaeger) connectToJaegerAgent() error {
+	ctx := context.Background()
+
 	if !j.isEnabled() {
-		return nil, nil
+		return nil
 	}
 
 	url := fmt.Sprintf("%s:%d", j.agentURI, j.port)
@@ -144,7 +139,7 @@ func (j *jaeger) connectToJaegerAgent(ctx context.Context) (*sdktrace.TracerProv
 		otlptracehttp.WithInsecure(),
 	)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	tracerProvider := sdktrace.NewTracerProvider(
@@ -152,6 +147,9 @@ func (j *jaeger) connectToJaegerAgent(ctx context.Context) (*sdktrace.TracerProv
 		sdktrace.WithBatcher(je), // Set je as our 'Trace Exporter'
 		sdktrace.WithResource(j.getResource()),
 	)
+
+	otel.SetTracerProvider(tracerProvider)
+	otel.SetTextMapPropagator(propagation.TraceContext{})
 
 	// Trace view for console
 	// if j.stdTracingEnabled {
@@ -165,5 +163,8 @@ func (j *jaeger) connectToJaegerAgent(ctx context.Context) (*sdktrace.TracerProv
 	// 	}
 	// }
 
-	return tracerProvider, nil
+	j.context = ctx
+	j.tracerProvider = tracerProvider
+
+	return nil
 }
