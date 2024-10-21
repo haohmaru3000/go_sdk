@@ -9,11 +9,10 @@ import (
 	"strings"
 	"sync"
 
-	"go.opencensus.io/plugin/ochttp"
-
 	"github.com/gin-gonic/gin"
 	"github.com/haohmaru3000/go_sdk/httpserver/middleware"
 	"github.com/haohmaru3000/go_sdk/logger"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
 var (
@@ -84,9 +83,15 @@ func (gs *ginService) Configure() error {
 		gs.router.Use(middleware.PanicLogger())
 	}
 
-	och := &ochttp.Handler{
-		Handler: gs.router,
-	}
+	// och := &ochttp.Handler{
+	// 	Handler: gs.router,
+	// }
+
+	och := otelhttp.NewHandler(
+		gs.router,
+		"gin server",
+		otelhttp.WithMessageEvents(otelhttp.ReadEvents, otelhttp.WriteEvents),
+	)
 
 	gs.svr = &myHttpServer{
 		Server: http.Server{Handler: och},
