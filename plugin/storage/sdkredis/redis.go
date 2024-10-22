@@ -43,21 +43,19 @@ type RedisDBOpt struct {
 }
 
 type redisDB struct {
-	context context.Context
-	name    string
-	client  *redis.Client
-	logger  logger.Logger
+	name   string
+	client *redis.Client
+	logger logger.Logger
 	*RedisDBOpt
 }
 
 func getDefaultRedisDB() *redisDB {
-	return NewRedisDB(context.Background(), defaultRedisName, "")
+	return NewRedisDB(defaultRedisName, "")
 }
 
-func NewRedisDB(ctx context.Context, name, flagPrefix string) *redisDB {
+func NewRedisDB(name, flagPrefix string) *redisDB {
 	return &redisDB{
-		context: ctx,
-		name:    name,
+		name: name,
 		RedisDBOpt: &RedisDBOpt{
 			Prefix:    flagPrefix,
 			MaxActive: defaultRedisMaxActive,
@@ -80,9 +78,9 @@ func (r *redisDB) InitFlags() {
 		prefix += "-"
 	}
 
-	flag.StringVar(&r.RedisUri, prefix+"go-redis-uri", "", "(For go-redis) Redis connection-string. Ex: redis://localhost/0")
-	flag.IntVar(&r.MaxActive, prefix+"go-redis-pool-max-active", defaultRedisMaxActive, "(For go-redis) Override redis pool MaxActive")
-	flag.IntVar(&r.MaxIde, prefix+"go-redis-pool-max-idle", defaultRedisMaxIdle, "(For go-redis) Override redis pool MaxIdle")
+	flag.StringVar(&r.RedisUri, prefix+"-uri", "redis://localhost:6379", "(For go-redis) Redis connection-string. Ex: redis://localhost/0")
+	flag.IntVar(&r.MaxActive, prefix+"-pool-max-active", defaultRedisMaxActive, "(For go-redis) Override redis pool MaxActive")
+	flag.IntVar(&r.MaxIde, prefix+"-pool-max-idle", defaultRedisMaxIdle, "(For go-redis) Override redis pool MaxIdle")
 }
 
 func (r *redisDB) Configure() error {
@@ -106,7 +104,7 @@ func (r *redisDB) Configure() error {
 	client := redis.NewClient(opt)
 
 	// Ping to test Redis connection
-	if err := client.Ping(r.context).Err(); err != nil {
+	if err := client.Ping(context.Background()).Err(); err != nil {
 		r.logger.Error("Cannot connect Redis. ", err.Error())
 		return err
 	}

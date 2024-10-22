@@ -3,12 +3,14 @@ package sdkgorm
 import (
 	"errors"
 	"flag"
+	"gorm.io/gorm"
+	logger2 "gorm.io/gorm/logger"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/haohmaru3000/go_sdk/logger"
 	"github.com/haohmaru3000/go_sdk/plugin/storage/sdkgorm/gormdialects"
-	"gorm.io/gorm"
 )
 
 type GormDBType int
@@ -117,7 +119,14 @@ func (gdb *gormDB) Get() interface{} {
 	if gdb.logger.GetLevel() == "debug" || gdb.logger.GetLevel() == "trace" {
 		return gdb.db.Session(&gorm.Session{NewDB: true}).Debug()
 	}
-	return gdb.db.Session(&gorm.Session{NewDB: true})
+	newSessionDB := gdb.db.Session(&gorm.Session{NewDB: true, Logger: gdb.db.Logger.LogMode(logger2.Silent)})
+	if db, err := newSessionDB.DB(); err == nil {
+		db.SetMaxOpenConns(100)
+		db.SetMaxIdleConns(100)
+		db.SetConnMaxIdleTime(time.Hour)
+	}
+
+	return newSessionDB
 }
 
 func getDBType(dbType string) GormDBType {
