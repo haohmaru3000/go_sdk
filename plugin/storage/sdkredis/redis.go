@@ -21,10 +21,11 @@ package sdkredis
 // 		Distributed Locks.
 
 import (
+	"context"
 	"flag"
 
-	"github.com/go-redis/redis"
 	"github.com/haohmaru3000/go_sdk/logger"
+	"github.com/redis/go-redis/v9"
 )
 
 var (
@@ -42,19 +43,21 @@ type RedisDBOpt struct {
 }
 
 type redisDB struct {
-	name   string
-	client *redis.Client
-	logger logger.Logger
+	context context.Context
+	name    string
+	client  *redis.Client
+	logger  logger.Logger
 	*RedisDBOpt
 }
 
 func getDefaultRedisDB() *redisDB {
-	return NewRedisDB(defaultRedisName, "")
+	return NewRedisDB(context.Background(), defaultRedisName, "")
 }
 
-func NewRedisDB(name, flagPrefix string) *redisDB {
+func NewRedisDB(ctx context.Context, name, flagPrefix string) *redisDB {
 	return &redisDB{
-		name: name,
+		context: ctx,
+		name:    name,
 		RedisDBOpt: &RedisDBOpt{
 			Prefix:    flagPrefix,
 			MaxActive: defaultRedisMaxActive,
@@ -103,7 +106,7 @@ func (r *redisDB) Configure() error {
 	client := redis.NewClient(opt)
 
 	// Ping to test Redis connection
-	if err := client.Ping().Err(); err != nil {
+	if err := client.Ping(r.context).Err(); err != nil {
 		r.logger.Error("Cannot connect Redis. ", err.Error())
 		return err
 	}
