@@ -6,9 +6,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/haohmaru3000/go_sdk/logger"
-
 	"github.com/globalsign/mgo"
+	"github.com/haohmaru3000/go_sdk/logger"
 )
 
 var (
@@ -135,7 +134,7 @@ func (mgDB *mongoDB) getConnWithRetry(retryCount int) (*mgo.Session, error) {
 	db, err := mgo.Dial(mgDB.MgoUri)
 
 	if err != nil {
-		for {
+		for range retryCount {
 			time.Sleep(time.Second * 1)
 			mgDB.logger.Errorf("Retry to connect %s.\n", mgDB.name)
 			db, err = mgo.Dial(mgDB.MgoUri)

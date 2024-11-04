@@ -1,8 +1,9 @@
 package sdkcm
 
 import (
-	"github.com/btcsuite/btcutil/base58"
 	"strings"
+
+	"github.com/btcsuite/btcutil/base58"
 )
 
 type OrderBy struct {

@@ -1,8 +1,9 @@
 package sdkcm
 
 import (
-	"github.com/btcsuite/btcutil/base58"
 	"net/http"
+
+	"github.com/btcsuite/btcutil/base58"
 )
 
 // Response helpers

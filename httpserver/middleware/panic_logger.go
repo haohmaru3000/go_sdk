@@ -3,13 +3,14 @@ package middleware
 import (
 	"bytes"
 	"fmt"
-	"github.com/gin-gonic/gin"
 	"io"
 	"log"
 	"net/http/httputil"
 	"os"
 	"runtime"
 	"time"
+
+	"github.com/gin-gonic/gin"
 )
 
 var (

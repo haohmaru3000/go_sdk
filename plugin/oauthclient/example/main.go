@@ -1,8 +1,9 @@
 package main
 
 import (
-	"golang.org/x/oauth2/clientcredentials"
 	"net/http"
+
+	"golang.org/x/oauth2/clientcredentials"
 
 	"github.com/gin-gonic/gin"
 	goservice "github.com/haohmaru3000/go_sdk"

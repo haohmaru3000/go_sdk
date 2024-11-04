@@ -5,10 +5,11 @@ package logger
 
 import (
 	"fmt"
-	"github.com/sirupsen/logrus"
 	"log"
 	"runtime"
 	"strings"
+
+	"github.com/sirupsen/logrus"
 )
 
 type Fields logrus.Fields
@@ -105,7 +106,7 @@ func (l *logger) Debugf(format string, args ...interface{}) {
 
 func (l *logger) Print(args ...interface{}) {
 	if l.Entry.Logger.Level >= logrus.DebugLevel {
-		l.debugSrc().Debug(args)
+		l.debugSrc().Debug(args...)
 	}
 }
 

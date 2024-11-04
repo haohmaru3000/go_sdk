@@ -9,10 +9,11 @@ import (
 	"strings"
 	"sync"
 
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+
 	"github.com/gin-gonic/gin"
 	"github.com/haohmaru3000/go_sdk/httpserver/middleware"
 	"github.com/haohmaru3000/go_sdk/logger"
-	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
 var (
@@ -75,8 +76,8 @@ func (gs *ginService) Configure() error {
 
 	gs.logger.Debug("init gin engine...")
 	gs.router = gin.New()
-	if !gs.GinNoDefault {
-		if !ginNoLogger {
+	if !gs.GinNoDefault { // Default
+		if !ginNoLogger { // Use Gin Logger
 			gs.router.Use(gin.Logger())
 		}
 		//gs.router.Use(gin.Recovery())

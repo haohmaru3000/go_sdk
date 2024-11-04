@@ -2,6 +2,7 @@ package dbmigration
 
 import (
 	"fmt"
+	"gorm.io/gorm"
 	"log"
 	"os"
 	"path/filepath"
@@ -10,7 +11,6 @@ import (
 	"strings"
 
 	"github.com/haohmaru3000/go_sdk/logger"
-	"gorm.io/gorm"
 )
 
 const (

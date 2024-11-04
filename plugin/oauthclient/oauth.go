@@ -4,8 +4,9 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"golang.org/x/oauth2/clientcredentials"
 	"net/http"
+
+	"golang.org/x/oauth2/clientcredentials"
 )
 
 type TrustedClient interface {

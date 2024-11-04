@@ -1,8 +1,9 @@
 package sdkcm
 
 import (
-	"github.com/globalsign/mgo/bson"
 	"time"
+
+	"github.com/globalsign/mgo/bson"
 )
 
 type MgoModel struct {

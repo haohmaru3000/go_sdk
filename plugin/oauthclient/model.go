@@ -92,7 +92,7 @@ type OAuthUserUpdate struct {
 	Address     *string `json:"address,omitempty" form:"address" gorm:"address"`
 
 	Dob       *sdkcm.JSONDate `json:"dob,omitempty" form:"-" gorm:"dob" time_format:"2006-01-02"`
-	DobString *string         `json:"dob" form:"dob" gorm:"-"`
+	DobString *string         `json:"-" form:"dob" gorm:"-"`
 	Status    *int            `json:"-" form:"-" gorm:"status"`
 
 	Password             *string `json:"password"`

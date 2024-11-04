@@ -4,9 +4,10 @@ import (
 	"database/sql/driver"
 	"errors"
 	"fmt"
-	"github.com/globalsign/mgo/bson"
 	"strings"
 	"time"
+
+	"github.com/globalsign/mgo/bson"
 )
 
 var (
